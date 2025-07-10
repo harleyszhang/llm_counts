@@ -1,5 +1,10 @@
-from .utils.config import ModelConfig
+from .utils.config import ModelConfig, DeepseekConfig
 from .utils.constants import *
+from .utils.utils import num_to_string
+import matplotlib.pyplot as plt
+import pandas as pd
+from typing import Dict, List, Tuple, Any
+import numpy as np
 
 
 class CountCausalLMParams(object):
@@ -14,7 +19,14 @@ class CountCausalLMParams(object):
         self.head_dim = model_config.head_dim
         self.model_type = model_config.model_type
 
-    def count_params_embedding(self, shared_embedding: bool = True) -> int:
+        self.is_moe = (getattr(model_config, "num_experts", None) is not None)
+        self.is_qwen3moe = "qwen3_moe" == self.model_type
+
+        if self.is_moe:
+            self.num_experts = getattr(model_config, "num_experts", 1)  # Default to 1 expert if not specified
+            self.num_experts_per_tok = getattr(model_config, "num_experts_per_tok", 1)
+
+    def params_embedding(self, shared_embedding: bool = True) -> int:
         """Get the number of parameters in the embedding layer. 
         params_te = vocab_size * d_model
         Args:
@@ -31,7 +43,7 @@ class CountCausalLMParams(object):
 
         return num_params_input_embedding + num_params_output_embedding
 
-    def count_params_per_layer_mha(self) -> int:
+    def params_per_layer_mha(self) -> int:
         """Get the number of parameters per layer in the attention module
         which include 4 linear layer: q/k/v/o linear layers.
 
@@ -42,21 +54,21 @@ class CountCausalLMParams(object):
         params_kv_proj = 2 * self.hidden_size * self.num_kv_heads * self.head_dim
         return params_qo_proj + params_kv_proj
 
-    def count_params_per_layer_mlp(self) -> int:
-        """Get the number of parameters in the MLP linear layers, including the
-        intermediate and output matrices.
-        params_mlp = params_gate_proj + params_up_proj + params_down_proj
-        Returns:
-            int: the number of parameters in the two MLP linear layers
+    def params_per_layer_moe_mlp(self, is_active: bool = True) -> int:
+        """Get the number of parameters in the MoE MLP linear layers.
+        params of mlp = gate_proj + up_proj + down_proj
+        gate_proj / up_proj / down_proj params: hidden_size * intermediate_size
         """
-        params_gate_proj = self.hidden_size * self.intermediate_size
-        params_up_proj = self.hidden_size * self.intermediate_size
-        params_down_proj = self.intermediate_size * self.hidden_size
-        params_mlp = params_gate_proj + params_up_proj + params_down_proj
+        if self.is_qwen3moe:
+            params_router = self.hidden_size * self.num_experts
+            expert_counts = self.num_experts_per_tok if is_active else self.num_experts
+            params_experts = expert_counts * 3 * self.hidden_size * self.intermediate_size
+            return params_router + params_experts
+        else:
+            params_mlp = 3 * self.hidden_size * self.intermediate_size
+            return params_mlp
 
-        return params_mlp
-
-    def count_params_per_layer_norm(self) -> int:
+    def params_per_layer_norm(self) -> int:
         """Get the number of atten_norm and mlp_norm parameters per layer.
         """
         # q_norm、k_norm、atten_norm、mlp_norm
@@ -65,16 +77,16 @@ class CountCausalLMParams(object):
         else:
             return 2 * self.hidden_size
 
-    def count_params_per_layer(self, norm_ignore=False) -> tuple:
+    def params_per_layer(self, norm_ignore=False) -> tuple:
         """Get the number of params per layer mainly including the attention and MLP layers.
 
         params_per_layer = params_mha + params_mlp + params_norm
 
         """
-        params_per_layer_mha = self.count_params_per_layer_mha()
-        params_per_layer_mlp = self.count_params_per_layer_mlp()
-        params_per_layer_norm = 0 if norm_ignore else self.count_params_per_layer_norm()
-        params_input_embedding = self.count_params_embedding()
+        params_per_layer_mha = self.params_per_layer_mha()
+        params_per_layer_mlp = self.params_per_layer_moe_mlp()
+        params_per_layer_norm = 0 if norm_ignore else self.params_per_layer_norm()
+        params_input_embedding = self.params_embedding()
 
         params_per_layer = (
             params_per_layer_mha + params_per_layer_mlp + params_per_layer_norm
@@ -90,7 +102,7 @@ class CountCausalLMParams(object):
 
         return params_per_layer, dict_params_per_layer
 
-    def count_params_model(self) -> int:
+    def params_model(self) -> int:
         """Get the total number of parameters in the model 
         including all layers and token embedding layer.
         params_model = params_embedding + params_per_layer * num_layers
@@ -98,9 +110,9 @@ class CountCausalLMParams(object):
         Returns:
             int: the total number of parameters in the model
         """
-        params_per_layer, _ = self.count_params_per_layer()
+        params_per_layer, _ = self.params_per_layer()
         params_model = (
-            params_per_layer * self.num_layers + self.count_params_embedding()
+            params_per_layer * self.num_layers + self.params_embedding()
         )
 
         return params_model

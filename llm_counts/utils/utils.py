@@ -1,5 +1,76 @@
 import pprint
+from collections import OrderedDict
+from collections.abc import Mapping
+from typing import Any
+import pandas as pd
 from .constants import *
+
+class GPU_perf():
+    def __init__(self,gpu_type, sm,comm_sm, gpu_per_node,fp16_flops,fp8_flops,fp4_flops,mem,mem_bw, nvlink_bw,pcie_bw, discount_rate):
+        self.gpu_type = gpu_type
+        self.sm = sm
+        self.gpu_per_node = gpu_per_node
+        self.comm_sm = comm_sm
+        self.fp16_flops = fp16_flops
+        self.fp8_flops = fp8_flops
+        self.fp4_flops = fp4_flops
+        self.mem = mem
+        self.mem_bw = mem_bw
+        self.nvlink_bw = nvlink_bw
+        self.pcie_bw = pcie_bw
+        self.discount_rate = discount_rate
+
+    def get_fp16_flops(self):
+        return self.fp16_flops * self.discount_rate  * ( self.sm  - self.comm_sm) / self.sm
+
+    def get_fp8_flops(self):
+        return self.fp8_flops *  self.discount_rate * ( self.sm  - self.comm_sm) / self.sm
+
+    def get_fp4_flops(self):
+        return self.fp4_flops *  self.discount_rate * ( self.sm  - self.comm_sm) / self.sm
+
+    def get_mem_bw(self):
+        return self.mem_bw *  self.discount_rate
+
+    def get_nvlink_bw(self):
+        return self.nvlink_bw *  self.discount_rate
+
+    def get_pcie_bw(self):
+        return self.pcie_bw *  self.discount_rate
+
+# --------------------------------------------------------------------------- #
+# Utility functions
+# --------------------------------------------------------------------------- #
+# 辅助函数：格式化整数序列为字符串
+def format_int_sequence(obj: Any) -> Any:
+    """
+    递归地格式化整数列表，并对 dict 与 OrderedDict 递归处理，
+    保留映射类型。
+    """
+    # 1. 先处理所有映射类型（dict、OrderedDict 等）
+    if isinstance(obj, Mapping):
+        # 用 type(obj) 保留原始类型
+        return type(obj)(
+            (key, format_int_sequence(value))
+            for key, value in obj.items()
+        )
+
+    # 2. 处理 tuple
+    if isinstance(obj, tuple):
+        # 如果全是 int，就直接拼成 "[...]"；否则递归每个元素
+        if all(isinstance(x, int) for x in obj):
+            return f"[{', '.join(map(str, obj))}]"
+        return tuple(format_int_sequence(x) for x in obj)
+
+    # 3. 处理 list
+    if isinstance(obj, list):
+        if all(isinstance(x, int) for x in obj):
+            return f"[{', '.join(map(str, obj))}]"
+        return [format_int_sequence(x) for x in obj]
+
+    # 4. 其它类型原样返回
+    return obj
+
 
 class Formatter(object):
     @classmethod
@@ -15,7 +86,7 @@ class Formatter(object):
 
     @classmethod
     def print_format_summary_dict(
-        self,
+        cls,
         summary_dict: dict,
         depth: int,
         category: str | None = None,
@@ -52,13 +123,13 @@ class Formatter(object):
             pprint.pprint(summary_dict, indent=4, sort_dicts=False)
 
 
-def print_list(list):
+def print_list(lst):
     """print one-dimensional list
 
     :param list: List[int]
     :return: None
     """
-    for i, x in enumerate(list):
+    for i, x in enumerate(lst):
         print(x, end="\n")
 
 
@@ -154,6 +225,8 @@ def get_readable_summary_dict(summary_dict: dict, title="Summary") -> str:
 
 
 def within_range(val, target, tolerance):
+    if target == 0:
+        raise ValueError("Target cannot be zero")
     return abs(val - target) / target < tolerance
 
 

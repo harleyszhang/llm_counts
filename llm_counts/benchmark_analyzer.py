@@ -20,12 +20,12 @@ from .count_flops import CountCausalLMFlops
 from .count_params import CountCausalLMParams
 from .count_memory import CountCausalLMMemory
 from .count_latency import CountCausalLMLatency
-from .llm_analyzer import LLMAnalyzer
+from .layer_graph_visualizer import LayerAnalyzer, LayerGraphVisualizer
 
 logger = logging.getLogger()
 
 
-class LLMAnalyzerVisual(object):
+class LayerAnalyzerVisual(object):
     """Measures the latency, memory, number of estimated floating-point operations,
     and parameters of each module in a PyTorch model.
     """
@@ -52,7 +52,7 @@ class LLMAnalyzerVisual(object):
         self.num_layers_per_gpu = int(self.l / self.parallelism_config.pp_size)
 
         self.gpu_memory_in_GB = (
-            llm_configs.gpu_config.memory_GPU_in_GB * 10**9
+            llm_configs.gpu_config.memory_in_GB * 10**9
         ) 
 
         self.llm_params = CountCausalLMParams(self.model_config)
@@ -106,33 +106,33 @@ class LLMAnalyzerVisual(object):
             },
             "gpu_config": {
                 "name": self.gpu_config.name,
-                "memory_GPU_in_GB": f"{self.gpu_config.memory_GPU_in_GB} GB",
-                "gpu_hbm_bandwidth": f"{self.gpu_config.hbm_bandwidth_in_GB_per_sec} GB/s",
-                "gpu_intra_node_bandwidth": f"{self.gpu_config.intra_node_bandwidth_in_GB_per_sec} GB/s",
+                "memory_in_GB": f"{self.gpu_config.memory_in_GB} GB",
+                "gpu_hbm_bw": f"{self.gpu_config.hbm_bw} GB/s",
+                "gpu_intra_node_bw": f"{self.gpu_config.intra_node_bw} GB/s",
                 "gpu_fp16_TFLOPS": f"{self.gpu_config.peak_fp16_TFLOPS} TFLOPS",
             },
         }
 
         # -------------------------- 1. Params --------------------------
         params_per_layer, dict_params_per_layer = (
-            self.llm_params.count_params_per_layer()
+            self.llm_params.params_per_layer()
         )
-        num_params_model = self.llm_params.count_params_model()
+        num_params_model = self.llm_params.params_model()
 
         # -------------------------- 2. FLOPs ---------------------------
         prefill_flops_per_layer, prefill_dict_flops_per_layer = (
-            self.llm_flops.count_flops_per_layer(bs, seq_len, generate_len)
+            self.llm_flops.flops_per_layer(bs, seq_len, generate_len)
         )
         decode_flops_per_layer, decode_dict_flops_per_layer = (
-            self.llm_flops.count_flops_per_layer(bs, 1, generate_len)
+            self.llm_flops.flops_per_layer(bs, 1, generate_len)
         )
 
-        prefill_num_flops_model = self.llm_flops.count_flops_model(bs, seq_len, generate_len)
-        decode_num_flops_model = self.llm_flops.count_flops_model(bs, 1, generate_len)
+        prefill_num_flops_model = self.llm_flops.flops_model(bs, seq_len, generate_len)
+        decode_num_flops_model = self.llm_flops.flops_model(bs, 1, generate_len)
 
         # -------------------------- 3. Memory --------------------------
         memory_prefill_summary_dict, memory_decode_summary_dict = (
-            self.llm_memory.count_memory_per_gpu(
+            self.llm_memory.memory_per_gpu(
                 bs,
                 seq_len,
                 generate_len,
@@ -145,13 +145,13 @@ class LLMAnalyzerVisual(object):
 
         # -------------------------- 4. Latency -------------------------
         prefill_latency_per_layer, prefill_dict_latency_per_layer = (
-            self.llm_latency.count_latency_per_layer(bs, seq_len, 0)
+            self.llm_latency.latency_per_layer(bs, seq_len, 0)
         )
         decode_latency_per_layer, decode_dict_latency_per_layer = (
-            self.llm_latency.count_latency_per_layer(bs, 1, generate_len)
+            self.llm_latency.latency_per_layer(bs, 1, generate_len)
         )
         prefill_latency_breakdown, decode_latency_breakdown = (
-            self.llm_latency.count_latency(
+            self.llm_latency.latency(
                 bs,
                 seq_len,
                 generate_len,
@@ -164,23 +164,23 @@ class LLMAnalyzerVisual(object):
             "consume_memory_per_gpu": memory_decode_summary_dict["consume_memory_per_gpu"],
             "prefill_flops": prefill_num_flops_model,
             "decode_flops_per_step": decode_num_flops_model,
-            "TTFT": prefill_latency_breakdown["prefill_latency"],
-            "TTOT": decode_latency_breakdown["decode_latency"],
+            "TTFT": prefill_latency_breakdown["TTFT"],
+            "TTOT": decode_latency_breakdown["TTOT"],
             "kv_cache_latency": decode_latency_breakdown["kv_cache_latency"],
-            "total_infer_latency": prefill_latency_breakdown["prefill_latency"] + decode_latency_breakdown["decode_latency"] * generate_len,
-            "support_max_batch_total_tokens": memory_decode_summary_dict["max_batch_total_tokens"],
+            "total_infer_latency": prefill_latency_breakdown["TTFT"] + decode_latency_breakdown["TTOT"] * generate_len,
+            "max_batch_total_tokens": memory_decode_summary_dict["max_batch_total_tokens"],
         }
 
         # --------------------------- 5. Memory Access ----------------------
         if visual_flag:
             model_type = self.model_config.model_type
-            llm_analyzer = LLMAnalyzer(self.model_config, self.gpu_config, tp_size=self.tp_size)
+            llm_analyzer = LayerAnalyzer(self.model_config, self.gpu_config, tp_size=self.tp_size)
             results = llm_analyzer.analyze_model(bs=bs, seq_len=seq_len, generate_len=generate_len)
 
-            # -------------------------- 绘图：模型 graph 图示例 --------------------------
+            # # -------------------------- 绘图：模型 graph 图示例 --------------------------
+            llm_visualizer = LayerGraphVisualizer(self.model_config, results)
             base_path = f"_{self.model_config.model_name}_tp{self.tp_size}_bs{self.b}_seqlen{self.s}_genlen{self.o}.png"
-            llm_analyzer.create_layer_graph(model_type, results, base_path)
-            # Formatter.print_format_summary_dict(results, get_dict_depth(results))
+            llm_visualizer.render(base_path)
 
             # -------------------------- 绘图：Pie 图示例 --------------------------
             prefill_latency_pie_save_path = f"./figures/latency_prefill" + base_path
@@ -466,7 +466,7 @@ def llm_profile(
         gpu_efficiency_config=gpu_efficiency_config,
     )
 
-    profiler = LLMAnalyzerVisual(llm_configs)
+    profiler = LayerAnalyzerVisual(llm_configs)
 
     infer_result_dict = profiler.infer_profile(
         bs=batch_size,
@@ -495,6 +495,7 @@ def llm_profile(
         "TTFT": infer_result_dict.get("TTFT", None),
         "TTOT": infer_result_dict.get("TTOT", None),
         "Total_latency": infer_result_dict.get("total_infer_latency", None),
+        "max_batch_total_tokens": infer_result_dict.get("max_batch_total_tokens", None),
     }
     visual_results = {
         "seq_len": seq_len,

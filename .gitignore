@@ -1,5 +1,4 @@
 .DS_Store
 tmp
-figures
 .ruff_cache
-**/__pycache__/
+*/**/__pycache__
