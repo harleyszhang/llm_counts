@@ -10,7 +10,7 @@ def test_llm_analyzer(
         seq_len: int = 600,
         generate_len: int = 128,
         tp_size: int = 1,
-        tade: bool = False
+        tade: bool = True
     ):
     # Load configurations
     model_config, gpu_config = get_model_and_gpu_config_by_name(model_name, gpu_name)

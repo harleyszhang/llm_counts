@@ -178,10 +178,10 @@ if __name__ == "__main__":
     main()
 
 """
-python cli_perf_visual.py \
+python framework_tools/LLMCounts/cli_perf_visual.py \
     --model-name Qwen3-30B-A3B \
     --gpu-name a100-sxm-40gb \
-    --tp 1 --batch-size 16 \
+    --tp 8 --batch-size 32 \
     --seq-len 1024 --gen-len 128 \
     --print-all
 """

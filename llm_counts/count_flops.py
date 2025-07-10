@@ -136,3 +136,4 @@ class CountCausalLMFlops(object):
         pass of the entire transformer model, given the batch size and sequence
         """
         return 2 * self.flops_model(bs, seq_len, generate_len)
+

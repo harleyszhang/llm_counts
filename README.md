@@ -160,13 +160,13 @@ llama2-70b 模型，A100-SXM40GB，tp_size = 8 和 bs = 20， decode 阶段:
 <img src="images/grpah_decode_llama2-70b_tp8_bs32_seqlen1024_genlen128.png" width="50%" alt="decode 阶段">
 </div>
 
-qwen3 moe 模型结构可视化, expert 结构其实就是 moe_mlp，下图没有展开。prefill 阶段: graph_prefill_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128
+qwen3 moe 模型结构可视化, expert 结构其实就是 moe_mlp，下图没有展开。graph_prefil_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128:
 
-![graph_prefill_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128](./images/Qwen3-30B-A3B/graph_prefill_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128.png)
+![graph_prefill_Qwen3-30B-A3B](./images/Qwen3-30B-A3B/graph_prefill_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128.png)
 
-decode 阶段：graph_decode_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128
+graph_decode_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128:
 
-![graph_prefill_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128](./images/Qwen3-30B-A3B/graph_decode_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128.png)
+![decode_Qwen3-30B-A3B](./images/Qwen3-30B-A3B/graph_decode_Qwen3-30B-A3B_tp1_bs16_seqlen600_genlen128.png)
 
 ## 模型参数量、计算量、latency 分布
 

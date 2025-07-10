@@ -137,7 +137,7 @@
         "intra_node_min_message_latency": 9e-06
     },
     "h100-sxm-80gb": {
-        "name": "a100-sxm-80gb",
+        "name": "h100-sxm-80gb",
         "memory_in_GB": 80,
         "hbm_bw": 3430,
         "intra_node_bw": 900,
@@ -150,7 +150,7 @@
         "onchip_buffer": 33792e3
     },
     "h100-pcie-80gb": {
-        "name": "a100-sxm-80gb",
+        "name": "h100-pcie-80gb",
         "memory_in_GB": 80,
         "hbm_bw": 2048,
         "intra_node_bw": 128,

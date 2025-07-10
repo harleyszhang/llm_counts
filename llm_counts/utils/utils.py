@@ -106,19 +106,19 @@ class Formatter(object):
                 if not isinstance(value, dict):
                     summary_dict.update({key: num_to_string(value)})
                 else:
-                    self.print_format_summary_dict(
+                    cls.print_format_summary_dict(
                         value, get_dict_depth(value) - 1, category
                     )  # 递归
             if explicit_cat == "latency" or "latency" in key:
                 if not isinstance(value, dict):
                     summary_dict.update({key: latency_to_string(value)})
                 else:
-                    self.print_format_summary_dict(value, get_dict_depth(value) - 1, category)
+                    cls.print_format_summary_dict(value, get_dict_depth(value) - 1, category)
             if explicit_cat == "memory" or "memory" in key:
                 if not isinstance(value, dict):
                     summary_dict.update({key: f"{num_to_string(value)}B"})
                 else:
-                    self.print_format_summary_dict(value, get_dict_depth(value) - 1, category)
+                    cls.print_format_summary_dict(value, get_dict_depth(value) - 1, category)
         if depth >= 1:
             pprint.pprint(summary_dict, indent=4, sort_dicts=False)
 
@@ -207,21 +207,49 @@ def num_to_string(num, precision=2, return_type="string"):
         return (value, unit)
 
 
-def get_readable_summary_dict(summary_dict: dict, title="Summary") -> str:
-    log_str = f"\n{title.center(PRINT_LINE_WIDTH, '-')}\n"
-    for key, value in summary_dict.items():
-        if "num_tokens" in key or "num_params" in key or "flops" in key:
-            log_str += f"{key}: {num_to_string(value)}\n"
-        elif "gpu_hours" == key:
-            log_str += f"{key}: {int(value)}\n"
-        elif "memory" in key and "efficiency" not in key:
-            log_str += f"{key}: {num_to_string(value)}B\n"
-        elif "latency" in key:
-            log_str += f"{key}: {latency_to_string(value)}\n"
-        else:
-            log_str += f"{key}: {value}\n"
-    log_str += f"{'-' * PRINT_LINE_WIDTH}\n"
-    return log_str
+def get_readable_summary_dict(summary_dict: dict, title: str = "Summary", *, indent: int = 0) -> str:
+    """将 *summary_dict* 转换成易读的字符串。
+
+    1. 支持 **递归打印**，自动处理嵌套字典；
+    2. 统一使用 :func:`num_to_string`、:func:`latency_to_string` 等格式化工具；
+    3. 通过 *indent* 参数控制缩进，外部调用者无需关心。
+    """
+
+    def _format_line(k: str, v: Any, current_indent: int) -> str:
+        """根据键名自动格式化 *v* 并返回带缩进的一行字符串。"""
+        prefix = " " * (current_indent * 4)  # 4 个空格作为一级缩进
+
+        # 标量情况
+        if not isinstance(v, Mapping):
+            if ("num_tokens" in k) or ("num_params" in k) or ("flops" in k):
+                v_str = num_to_string(v)
+            elif k == "gpu_hours":
+                v_str = str(int(v))
+            elif ("memory" in k) and ("efficiency" not in k):
+                v_str = f"{num_to_string(v)}B"
+            elif "latency" in k:
+                v_str = latency_to_string(v)
+            else:
+                v_str = str(v)
+            return f"{prefix}{k}: {v_str}\n"
+
+        # 字典情况 → 递归
+        lines = f"{prefix}{k}:\n"
+        for sub_k, sub_v in v.items():
+            lines += _format_line(sub_k, sub_v, current_indent + 1)
+        return lines
+
+    # 生成最终字符串
+    output = ""
+    if indent == 0:
+        output += f"\n{title.center(PRINT_LINE_WIDTH, '-')}\n"
+
+    for k, v in summary_dict.items():
+        output += _format_line(k, v, indent)
+
+    if indent == 0:
+        output += f"{'-' * PRINT_LINE_WIDTH}\n"
+    return output
 
 
 def within_range(val, target, tolerance):

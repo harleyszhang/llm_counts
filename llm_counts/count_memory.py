@@ -418,3 +418,4 @@ class CountCausalLMMemory(object):
         }
 
         return memory_prefill_summary_dict, memory_decode_summary_dict
+

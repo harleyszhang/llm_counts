@@ -81,7 +81,7 @@
         "vocab_size": 92544,
         "max_seq_len": 32768,
         "model_type": "internlm2",
-        "model_name": "internlm2-20b-chat"
+        "model_name": "internlm2-20B-chat"
     },
     "Qwen3-8B": {
         "num_layers": 36,
