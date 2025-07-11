@@ -10,6 +10,7 @@ import pandas as pd  # 移至顶部，避免函数内重复导入
 class CountCausalLMFlops(object):
     """CountCausalLMFlops is a class that counts the number of floating point operations (FLOPs) 
     for a causal language model (LLM) during the forward passes, 支持 MoE 结构。"""
+    for a causal language model (LLM) during the forward passes, 支持 MoE 结构。"""
 
     def __init__(
         self,

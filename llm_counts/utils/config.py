@@ -254,6 +254,17 @@ class ModelConfig:
             head_dim=head_dim,
             num_experts=moe_num_experts,
             moe_layer_distribution=moe_layer_distribution,
+            num_layers=num_layers,
+            num_heads=num_heads,
+            hidden_size=getattr(hf_config, "hidden_size", None),
+            vocab_size=getattr(hf_config, "vocab_size", None),
+            num_kv_heads=num_kv_heads,
+            max_seq_len=getattr(hf_config, "max_position_embeddings", None),
+            intermediate_size=getattr(hf_config, "intermediate_size", None),
+            model_type=model_type,
+            head_dim=head_dim,
+            num_experts=moe_num_experts,
+            moe_layer_distribution=moe_layer_distribution,
         )
     
     

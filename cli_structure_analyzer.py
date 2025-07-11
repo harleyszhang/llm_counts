@@ -2,16 +2,23 @@ from llm_counts.layer_graph_visualizer import LayerAnalyzer, LayerGraphVisualize
 from llm_counts.utils.utils import *
 from llm_counts.utils.config import get_model_and_gpu_config_by_name
 import argparse
+import argparse
 
 def test_llm_analyzer(
+        model_name: str = "Qwen3-30B-A3B",
         model_name: str = "Qwen3-30B-A3B",
         gpu_name="a100-sxm-80gb",
         bs: int = 4,
         seq_len: int = 600,
         generate_len: int = 128,
+        bs: int = 4,
+        seq_len: int = 600,
+        generate_len: int = 128,
         tp_size: int = 1,
         tade: bool = True
+        tade: bool = True
     ):
+    # Load configurations
     # Load configurations
     model_config, gpu_config = get_model_and_gpu_config_by_name(model_name, gpu_name)
 
@@ -23,6 +30,10 @@ def test_llm_analyzer(
     analyzer = Analyzer(model_config, gpu_config, tp_size=tp_size)
     results = analyzer.analyze_model(bs=bs, seq_len=seq_len, generate_len=generate_len)
 
+    # Generate graph
+    base_fname = f"{model_name.replace('/', '_')}_tp{tp_size}_bs{bs}_seqlen{seq_len}_genlen{generate_len}"
+    print(f"Rendering graph to: {base_fname}")
+    Visualizer(model_config, results).render(base_fname)
     # Generate graph
     base_fname = f"{model_name.replace('/', '_')}_tp{tp_size}_bs{bs}_seqlen{seq_len}_genlen{generate_len}"
     print(f"Rendering graph to: {base_fname}")

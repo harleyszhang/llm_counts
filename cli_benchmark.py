@@ -81,6 +81,30 @@ def _parse_args():
     return parser.parse_args()
 
 
+def _parse_args():
+    parser = argparse.ArgumentParser(
+        description="Sweep sequence lengths, profile an LLM, and generate visualisations."
+    )
+    parser.add_argument("--model_name", required=True, help="LLM model name, e.g. Qwen3-32B")
+    parser.add_argument("--gpu_name", default="h100-sxm-80gb", help="Target GPU name")
+    parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
+    parser.add_argument("--generate_len", type=int, default=1024, help="Generation length")
+    parser.add_argument("--tp_size", type=int, default=2, help="Tensor‑parallel size")
+    parser.add_argument(
+        "--seq_lens",
+        type=int,
+        nargs="*",
+        default=None,
+        help="Space‑separated list of sequence lengths (tokens) to sweep",
+    )
+    parser.add_argument(
+        "--no_visual",
+        action="store_true",
+        help="Disable visualisation (figures will not be generated)",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
     args = _parse_args()
     sweep_seq_len(
