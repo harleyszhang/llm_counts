@@ -227,12 +227,6 @@ class CountCausalLMMemory(object):
             # Qwen3-MoE has an additional linear layer[router] for the expert selection
             mlp_linear_layers["gate"] = [self.hidden_size, self.head_dim]
             
-        num_experts_per_tok = getattr(self.model_config, "num_experts_per_tok", 1)
-
-        if self.is_qwen3moe:
-            # Qwen3-MoE has an additional linear layer[router] for the expert selection
-            mlp_linear_layers["gate"] = [self.hidden_size, self.head_dim]
-            
         mlp_linear_layers_mac = 0
         max_act = 0
         for _, (in_ch, out_ch) in mlp_linear_layers.items():

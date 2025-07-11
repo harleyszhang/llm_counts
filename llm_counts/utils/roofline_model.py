@@ -25,7 +25,7 @@ class ModelConfig:
 
 def roofline_analysis(
     peak_flops: float,
-    bw: float,
+    bandwidth: float,
     total_flops: float,
     total_mac_bytes: float
 ) -> tuple[float, float, str]:
@@ -37,10 +37,10 @@ def roofline_analysis(
         return 0, peak_flops, "compute"
     
     ai = total_flops / total_mac_bytes
-    turning_point = peak_flops / bw
+    turning_point = peak_flops / bandwidth
 
     if ai < turning_point:
-        return ai, ai * bw, "memory"
+        return ai, ai * bandwidth, "memory"
     else:
         return ai, peak_flops, "compute"
 
